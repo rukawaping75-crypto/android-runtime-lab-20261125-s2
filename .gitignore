@@ -1,0 +1,6 @@
+task-input.bin
+encrypted-evidence.der
+evidence/
+*.key.pem
+*.pfx
+

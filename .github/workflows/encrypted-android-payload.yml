@@ -1,0 +1,63 @@
+name: encrypted-android-payload
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact generic runner
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+
+      - name: Run secret acquisition gate
+        shell: bash
+        env:
+          TASK_ACQUIRE_B64: ${{ secrets.TASK_ACQUIRE_B64 }}
+        run: bash .github/scripts/run-acquisition-payload.sh
+
+      - name: Enable KVM for the hosted runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -c /dev/kvm
+          sudo chmod 0666 /dev/kvm
+          test -r /dev/kvm
+          test -w /dev/kvm
+
+      - name: Run encrypted-evidence payload in API 35 AVD
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        env:
+          TASK_PAYLOAD_B64: ${{ secrets.TASK_PAYLOAD_B64 }}
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot-save
+          disable-animations: true
+          script: bash .github/scripts/run-encrypted-payload.sh
+
+      - name: Remove acquired plaintext input
+        if: always()
+        shell: bash
+        run: |
+          set +e
+          if [[ -f task-input.bin ]]; then
+            shred -u task-input.bin 2>/dev/null || rm -f task-input.bin
+          fi
+
+      - name: Upload encrypted evidence only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: encrypted-android-evidence
+          path: encrypted-evidence.der
+          if-no-files-found: error
+          retention-days: 1
+
