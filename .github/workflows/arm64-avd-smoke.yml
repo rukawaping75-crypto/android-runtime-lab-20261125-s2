@@ -2,6 +2,9 @@ name: arm64-avd-smoke
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - .github/arm64-avd-smoke.trigger
 
 permissions:
   contents: read
