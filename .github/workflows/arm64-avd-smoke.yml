@@ -1,0 +1,45 @@
+name: arm64-avd-smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    steps:
+      - name: Enable KVM for the hosted runner
+        shell: bash
+        run: |
+          sudo usermod -aG kvm "$USER"
+          sudo chmod 0666 /dev/kvm
+
+      - name: Boot API 35 ARM64 AVD and record neutral properties
+        uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: arm64-v8a
+          profile: pixel_7
+          emulator-boot-timeout: 600
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot-save
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            mkdir -p smoke-evidence
+            uname -m > smoke-evidence/host-arch.txt
+            adb shell getprop ro.product.cpu.abi > smoke-evidence/guest-abi.txt
+            adb shell getprop ro.build.version.release > smoke-evidence/android-release.txt
+            adb shell getprop sys.boot_completed > smoke-evidence/boot-completed.txt
+
+      - name: Upload neutral smoke evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: arm64-avd-smoke-evidence
+          path: smoke-evidence
+          if-no-files-found: warn
+          retention-days: 1
