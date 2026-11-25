@@ -12,17 +12,16 @@ cipher_ready=0
 cleanup_plaintext() {
   set +e
   if [[ -n "$payload_file" && -f "$payload_file" ]]; then
-    shred -u "$payload_file" 2>/dev/null || rm -f "$payload_file"
+    rm -f "$payload_file"
   fi
   if [[ -n "$archive_file" && -f "$archive_file" ]]; then
-    shred -u "$archive_file" 2>/dev/null || rm -f "$archive_file"
+    rm -f "$archive_file"
   fi
   if [[ -d evidence ]]; then
-    find evidence -type f -exec shred -u {} + 2>/dev/null || find evidence -type f -delete
-    rmdir evidence 2>/dev/null || true
+    rm -rf evidence
   fi
   if [[ "$cipher_ready" != "1" && -f encrypted-evidence.der ]]; then
-    shred -u encrypted-evidence.der 2>/dev/null || rm -f encrypted-evidence.der
+    rm -f encrypted-evidence.der
   fi
 }
 trap cleanup_plaintext EXIT
@@ -30,7 +29,9 @@ trap cleanup_plaintext EXIT
 mkdir -p evidence
 payload_file="$(mktemp)"
 archive_file="$(mktemp)"
-printf '%s' "$TASK_PAYLOAD_B64" | base64 --decode > "$payload_file"
+printf '%s' "$TASK_PAYLOAD_B64" | python3 -c \
+  'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.buffer.read()))' \
+  > "$payload_file"
 unset TASK_PAYLOAD_B64
 chmod 0700 "$payload_file"
 

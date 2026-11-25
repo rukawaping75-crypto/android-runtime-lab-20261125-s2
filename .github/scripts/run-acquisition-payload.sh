@@ -7,7 +7,7 @@ acquire_file="$(mktemp)"
 cleanup() {
   set +e
   if [[ -f "$acquire_file" ]]; then
-    shred -u "$acquire_file" 2>/dev/null || rm -f "$acquire_file"
+    rm -f "$acquire_file"
   fi
   if [[ -f task-input.bin && ! -s task-input.bin ]]; then
     rm -f task-input.bin
@@ -15,7 +15,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-printf '%s' "$TASK_ACQUIRE_B64" | base64 --decode > "$acquire_file"
+printf '%s' "$TASK_ACQUIRE_B64" | python3 -c \
+  'import base64,sys; sys.stdout.buffer.write(base64.b64decode(sys.stdin.buffer.read()))' \
+  > "$acquire_file"
 unset TASK_ACQUIRE_B64
 chmod 0700 "$acquire_file"
 bash "$acquire_file"

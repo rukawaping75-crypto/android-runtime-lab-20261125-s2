@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   run:
-    runs-on: ubuntu-24.04
+    runs-on: macos-15
     timeout-minutes: 20
     steps:
       - name: Checkout exact generic runner
@@ -20,15 +20,6 @@ jobs:
           TASK_ACQUIRE_B64: ${{ secrets.TASK_ACQUIRE_B64 }}
         run: bash .github/scripts/run-acquisition-payload.sh
 
-      - name: Enable KVM for the hosted runner
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -c /dev/kvm
-          sudo chmod 0666 /dev/kvm
-          test -r /dev/kvm
-          test -w /dev/kvm
-
       - name: Run encrypted-evidence payload in API 35 AVD
         uses: ReactiveCircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         env:
@@ -36,7 +27,7 @@ jobs:
         with:
           api-level: 35
           target: google_apis
-          arch: x86_64
+          arch: arm64-v8a
           profile: pixel_7
           emulator-boot-timeout: 600
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -no-snapshot-save
@@ -49,7 +40,7 @@ jobs:
         run: |
           set +e
           if [[ -f task-input.bin ]]; then
-            shred -u task-input.bin 2>/dev/null || rm -f task-input.bin
+            rm -f task-input.bin
           fi
 
       - name: Upload encrypted evidence only
